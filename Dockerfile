@@ -9,15 +9,12 @@ RUN npm ci --frozen-lockfile
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Recibe la DATABASE_URL en tiempo de build para que Prisma pueda
-# generar el cliente y Next.js pueda hacer el build estático.
-ARG DATABASE_URL
-ENV DATABASE_URL=$DATABASE_URL
-
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Genera el cliente Prisma y construye Next.js
+# Genera el cliente Prisma (no necesita DB) y construye Next.js
+# DATABASE_URL se inyecta solo en runtime via variable de entorno
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN npx prisma generate && npm run build
 
 # ─── Stage 3: runner ─────────────────────────────────────────────────────────
