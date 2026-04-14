@@ -1,0 +1,376 @@
+generator client {
+  provider        = "prisma-client-js"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model analisis_discursivo {
+  id                      String                      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  publicacion_id          String                      @unique @db.Uuid
+  postura_general         enum_postura?
+  imaginario_dominante    enum_imaginario?
+  figura_directivo        enum_figura_directivo?
+  relacion_humano_ia      enum_relacion_humano_ia?
+  concepcion_tecnologia   enum_concepcion_tecnologia?
+  sentimiento             enum_sentimiento?
+  peso_transhumanista     Float?                      @db.Real
+  peso_posthumanista      Float?                      @db.Real
+  confianza_clasificacion Float?                      @db.Real
+  revisado_manualmente    Boolean?                    @default(false)
+  validado                Boolean?                    @default(false)
+  resumen                 String?
+  modelo_llm              String?                     @db.VarChar(100)
+  version_prompt_id       String?                     @db.Uuid
+  tokens_entrada          Int?
+  tokens_salida           Int?
+  costo_estimado_usd      Float?                      @db.Real
+  created_at              DateTime?                   @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                   @default(now()) @db.Timestamptz(6)
+  publicaciones           publicaciones               @relation(fields: [publicacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  versiones_prompt        versiones_prompt?           @relation(fields: [version_prompt_id], references: [id], onUpdate: NoAction)
+  citas_relevantes        citas_relevantes[]
+  entidades_mencionadas   entidades_mencionadas[]
+  indicadores_discursivos indicadores_discursivos[]
+  sub_imaginarios         sub_imaginarios[]
+  temas_extraidos         temas_extraidos[]
+
+  @@index([confianza_clasificacion], map: "idx_analisis_confianza")
+  @@index([imaginario_dominante], map: "idx_analisis_imaginario")
+  @@index([postura_general], map: "idx_analisis_postura")
+  @@index([publicacion_id], map: "idx_analisis_pub")
+}
+
+model catalogo_indicadores {
+  id              String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  indicador       String          @unique @db.VarChar(200)
+  tipo_imaginario enum_imaginario
+  descripcion     String?
+  created_at      DateTime?       @default(now()) @db.Timestamptz(6)
+}
+
+model catalogo_temas {
+  id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  tema        String    @unique @db.VarChar(200)
+  descripcion String?
+  activo      Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+model citas_relevantes {
+  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analisis_id         String              @db.Uuid
+  cita                String
+  categoria           String?             @db.VarChar(100)
+  notas               String?
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  analisis_discursivo analisis_discursivo @relation(fields: [analisis_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model comentarios_destacados {
+  id               String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  publicacion_id   String            @db.Uuid
+  autor            String?           @db.VarChar(200)
+  autor_es_ceo     Boolean?          @default(false)
+  autor_persona_id String?           @db.Uuid
+  contenido        String
+  sentimiento      enum_sentimiento?
+  likes_comentario Int?              @default(0)
+  fecha_comentario DateTime?         @db.Timestamptz(6)
+  url_comentario   String?
+  created_at       DateTime?         @default(now()) @db.Timestamptz(6)
+  personas         personas?         @relation(fields: [autor_persona_id], references: [id], onUpdate: NoAction)
+  publicaciones    publicaciones     @relation(fields: [publicacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model ejecuciones_scraping {
+  id                        String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  perfil_id                 String?              @db.Uuid
+  persona_id                String?              @db.Uuid
+  plataforma                enum_plataforma
+  estado                    enum_estado_scraping
+  publicaciones_encontradas Int?                 @default(0)
+  publicaciones_nuevas      Int?                 @default(0)
+  duracion_segundos         Int?
+  error_mensaje             String?
+  metadata                  Json?
+  created_at                DateTime?            @default(now()) @db.Timestamptz(6)
+  perfiles_plataforma       perfiles_plataforma? @relation(fields: [perfil_id], references: [id], onUpdate: NoAction)
+  personas                  personas?            @relation(fields: [persona_id], references: [id], onUpdate: NoAction)
+
+  @@index([estado], map: "idx_ejec_estado")
+  @@index([created_at(sort: Desc)], map: "idx_ejec_fecha")
+  @@index([plataforma], map: "idx_ejec_plataforma")
+}
+
+model entidades_mencionadas {
+  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analisis_id         String              @db.Uuid
+  entidad             String              @db.VarChar(300)
+  tipo_entidad        String?             @db.VarChar(50)
+  frecuencia          Int?                @default(1)
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  analisis_discursivo analisis_discursivo @relation(fields: [analisis_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([analisis_id], map: "idx_ent_analisis")
+}
+
+model indicadores_discursivos {
+  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analisis_id         String              @db.Uuid
+  indicador           String              @db.VarChar(200)
+  contexto            String?
+  tipo_imaginario     enum_imaginario?
+  frecuencia          Int?                @default(1)
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  analisis_discursivo analisis_discursivo @relation(fields: [analisis_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([analisis_id], map: "idx_indic_analisis")
+  @@index([indicador], map: "idx_indic_indicador")
+}
+
+model perfiles_plataforma {
+  id                   String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  persona_id           String                 @db.Uuid
+  plataforma           enum_plataforma
+  url_perfil           String
+  handle               String?                @db.VarChar(200)
+  seguidores           Int?
+  verificado           Boolean?               @default(false)
+  frecuencia_scraping  String?                @default("diaria") @db.VarChar(20)
+  ultimo_scraping      DateTime?              @db.Timestamptz(6)
+  activo               Boolean?               @default(true)
+  notas                String?
+  created_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamptz(6)
+  ejecuciones_scraping ejecuciones_scraping[]
+  personas             personas               @relation(fields: [persona_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  publicaciones        publicaciones[]
+
+  @@unique([persona_id, plataforma, handle])
+  @@index([persona_id], map: "idx_perfiles_persona")
+  @@index([plataforma], map: "idx_perfiles_plataforma")
+}
+
+model personas {
+  id                     String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nombre                 String                   @db.VarChar(200)
+  cargo                  String?                  @db.VarChar(200)
+  empresa                String?                  @db.VarChar(200)
+  sector                 String?                  @db.VarChar(100)
+  pais                   String?                  @db.VarChar(100)
+  idioma_principal       String?                  @default("en") @db.VarChar(10)
+  prioridad              enum_prioridad?          @default(media)
+  activo                 Boolean?                 @default(true)
+  notas                  String?
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  comentarios_destacados comentarios_destacados[]
+  ejecuciones_scraping   ejecuciones_scraping[]
+  perfiles_plataforma    perfiles_plataforma[]
+  publicaciones          publicaciones[]
+
+  @@index([activo], map: "idx_personas_activo", where: raw("(activo = true)"))
+  @@index([empresa], map: "idx_personas_empresa")
+  @@index([sector], map: "idx_personas_sector")
+}
+
+model publicaciones {
+  id                     String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  persona_id             String                   @db.Uuid
+  perfil_id              String?                  @db.Uuid
+  plataforma             enum_plataforma
+  tipo_contenido         enum_tipo_contenido
+  contenido_raw          String?
+  contenido_limpio       String?
+  titulo                 String?                  @db.VarChar(500)
+  url_original           String?
+  idioma                 String?                  @db.VarChar(10)
+  fecha_publicacion      DateTime?                @db.Timestamptz(6)
+  fecha_extraccion       DateTime?                @default(now()) @db.Timestamptz(6)
+  relevante_ia           Boolean?                 @default(true)
+  analizado              Boolean?                 @default(false)
+  qdrant_point_id        String?                  @db.VarChar(100)
+  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  analisis_discursivo    analisis_discursivo?
+  comentarios_destacados comentarios_destacados[]
+  perfiles_plataforma    perfiles_plataforma?     @relation(fields: [perfil_id], references: [id], onUpdate: NoAction)
+  personas               personas                 @relation(fields: [persona_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  reacciones             reacciones[]
+  transcripciones        transcripciones?
+
+  @@index([analizado], map: "idx_pub_analizado", where: raw("(analizado = false)"))
+  @@index([fecha_publicacion(sort: Desc)], map: "idx_pub_fecha")
+  @@index([persona_id], map: "idx_pub_persona")
+  @@index([plataforma], map: "idx_pub_plataforma")
+}
+
+model reacciones {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  publicacion_id  String        @db.Uuid
+  likes           Int?          @default(0)
+  shares          Int?          @default(0)
+  replies         Int?          @default(0)
+  views           Int?          @default(0)
+  saves           Int?          @default(0)
+  engagement_rate Float?        @db.Real
+  fecha_captura   DateTime?     @default(now()) @db.Timestamptz(6)
+  created_at      DateTime?     @default(now()) @db.Timestamptz(6)
+  publicaciones   publicaciones @relation(fields: [publicacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([publicacion_id], map: "idx_reac_publicacion")
+}
+
+model sub_imaginarios {
+  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analisis_id         String              @db.Uuid
+  tipo                enum_imaginario
+  subcategoria        String              @db.VarChar(100)
+  peso                Float?              @default(1.0) @db.Real
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  analisis_discursivo analisis_discursivo @relation(fields: [analisis_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([analisis_id], map: "idx_subimg_analisis")
+}
+
+model temas_extraidos {
+  id                  String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  analisis_id         String              @db.Uuid
+  tema                String              @db.VarChar(200)
+  relevancia          Float?              @default(1.0) @db.Real
+  created_at          DateTime?           @default(now()) @db.Timestamptz(6)
+  analisis_discursivo analisis_discursivo @relation(fields: [analisis_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([analisis_id], map: "idx_temas_analisis")
+  @@index([tema], map: "idx_temas_tema")
+}
+
+model transcripciones {
+  id                String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  publicacion_id    String        @unique @db.Uuid
+  texto_completo    String
+  idioma_detectado  String?       @db.VarChar(10)
+  duracion_segundos Int?
+  modelo_stt        String?       @db.VarChar(100)
+  confianza_stt     Float?        @db.Real
+  tiene_diarizacion Boolean?      @default(false)
+  metadata_stt      Json?
+  created_at        DateTime?     @default(now()) @db.Timestamptz(6)
+  publicaciones     publicaciones @relation(fields: [publicacion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model versiones_prompt {
+  id                  String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  version             String                @db.VarChar(20)
+  nombre              String?               @db.VarChar(200)
+  prompt_completo     String
+  modelo_objetivo     String?               @db.VarChar(100)
+  notas_cambio        String?
+  activo              Boolean?              @default(false)
+  metricas_validacion Json?
+  created_at          DateTime?             @default(now()) @db.Timestamptz(6)
+  analisis_discursivo analisis_discursivo[]
+
+  @@index([activo], map: "idx_prompt_activo", where: raw("(activo = true)"))
+}
+
+enum enum_concepcion_tecnologia {
+  medio_neutral
+  palanca_eficiencia
+  dispositivo_mejora
+  mediador_reconfigurador
+  modo_revelacion
+}
+
+enum enum_estado_scraping {
+  exitoso
+  error
+  parcial
+  bloqueado
+  sin_contenido_nuevo
+}
+
+enum enum_figura_directivo {
+  evangelizador_tecnologico
+  gerente_aumentado
+  orquestador_ensamblajes
+  curador_prudente
+  experimentador_sociotecnico
+  operador_infraestructuras
+}
+
+enum enum_imaginario {
+  transhumanista
+  posthumanista
+  mixto
+}
+
+enum enum_plataforma {
+  twitter
+  linkedin
+  youtube
+  blog_personal
+  medium
+  substack
+  podcast
+  conferencia
+  threads
+  reporte_anual
+  reddit
+  github
+  mastodon
+  comunicado_prensa
+  otra
+}
+
+enum enum_postura {
+  promocional_optimista
+  pragmatica_instrumental
+  estrategico_transformacional
+  cautelosa_gobernanza
+  humanista_relacional
+}
+
+enum enum_prioridad {
+  alta
+  media
+  baja
+}
+
+enum enum_relacion_humano_ia {
+  instrumento
+  asistente
+  copiloto
+  companero_cognitivo
+  mediador_activo
+  agente_semiautonomo
+  entorno_infraestructura
+}
+
+enum enum_sentimiento {
+  muy_positivo
+  positivo
+  neutro
+  negativo
+  muy_negativo
+  mixto
+}
+
+enum enum_tipo_contenido {
+  tweet
+  hilo_tweets
+  post_largo
+  articulo
+  video
+  podcast_episodio
+  keynote
+  panel
+  entrevista
+  carta_accionistas
+  comentario
+  otro
+}
