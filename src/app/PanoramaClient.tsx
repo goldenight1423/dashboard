@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import PosturaBarChart from '@/components/charts/PosturaBarChart';
 import ImaginarioDonut from '@/components/charts/ImaginarioDonut';
 import { POSTURA_COLORS, POSTURA_LABELS, IMAGINARIO_LABELS, PLATAFORMA_LABELS, SENTIMIENTO_LABELS } from '@/lib/constants';
-import { formatDate, formatNumber, getSentimientoColor, getImaginarioColor, getPosturaColor } from '@/lib/utils';
+import { formatDate, getSentimientoColor, getImaginarioColor, getPosturaColor } from '@/lib/utils';
 
 interface PanoramaData {
   metricas: {
@@ -31,7 +31,7 @@ function MetricCard({ label, value, sub, color }: {
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
       <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">{label}</p>
-      <p className="text-2xl font-bold" style={{ color: color ?? '#F9FAFB' }}>{value}</p>
+      <p className="text-2xl font-bold tabular-nums" style={{ color: color ?? '#F9FAFB' }}>{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   );
@@ -59,13 +59,13 @@ export default function PanoramaClient() {
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-gray-500">Cargando datos...</div>
+    <div className="flex items-center justify-center h-full" role="status" aria-live="polite">
+      <div className="text-gray-500">Cargando datos…</div>
     </div>
   );
 
   if (error || !data) return (
-    <div className="flex items-center justify-center h-full">
+    <div className="flex items-center justify-center h-full" role="alert">
       <div className="text-red-400">{error || 'Sin datos'}</div>
     </div>
   );
@@ -77,28 +77,28 @@ export default function PanoramaClient() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-white">Panorama General</h1>
+        <h1 className="text-xl font-bold text-white text-balance">Panorama General</h1>
         <p className="text-sm text-gray-500 mt-0.5">
           Visión global del análisis discursivo de CEOs sobre IA
         </p>
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="CEOs monitoreados" value={metricas.totalCeos} sub="Activos" />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" role="region" aria-label="Métricas principales">
+        <MetricCard label="CEOs Monitoreados" value={metricas.totalCeos} sub="Activos" />
         <MetricCard
-          label="Publicaciones analizadas"
+          label="Publicaciones Analizadas"
           value={metricas.totalAnalizadas}
           sub={`de ${metricas.totalPublicaciones} totales`}
         />
         <MetricCard
-          label="Sentimiento promedio"
+          label="Sentimiento Promedio"
           value={`${sentPct}%`}
           sub="Escala 0–100 (positivo)"
           color={sentColor}
         />
         <MetricCard
-          label="Imaginario dominante"
+          label="Imaginario Dominante"
           value={IMAGINARIO_LABELS[metricas.imaginarioDominante] ?? metricas.imaginarioDominante}
           sub={`${metricas.imaginarioDominantePct}% del corpus`}
           color={getImaginarioColor(metricas.imaginarioDominante)}
@@ -109,15 +109,18 @@ export default function PanoramaClient() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Distribución de posturas discursivas
+            Distribución de Posturas Discursivas
           </h2>
           <PosturaBarChart data={posturas} />
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2" aria-label="Leyenda de posturas">
             {posturas.map(p => (
-              <div key={p.postura} className="flex items-center gap-1.5 text-xs text-gray-400">
-                <div className="w-2.5 h-2.5 rounded-full"
-                  style={{ background: POSTURA_COLORS[p.postura] }} />
-                {POSTURA_LABELS[p.postura]} ({p.porcentaje}%)
+              <div key={p.postura} className="flex items-center gap-1.5 text-xs text-gray-400 min-w-0">
+                <div
+                  aria-hidden="true"
+                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                  style={{ background: POSTURA_COLORS[p.postura] }}
+                />
+                <span className="truncate">{POSTURA_LABELS[p.postura]} ({p.porcentaje}%)</span>
               </div>
             ))}
           </div>
@@ -125,7 +128,7 @@ export default function PanoramaClient() {
 
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h2 className="text-sm font-semibold text-gray-300 mb-4">
-            Imaginario trans vs posthumanista
+            Imaginario Trans vs. Posthumanista
           </h2>
           <ImaginarioDonut data={imaginarios} />
         </div>
@@ -135,15 +138,15 @@ export default function PanoramaClient() {
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-800">
           <h2 className="text-sm font-semibold text-gray-300">
-            Últimas publicaciones analizadas
+            Últimas Publicaciones Analizadas
           </h2>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Últimas publicaciones analizadas">
             <thead>
               <tr className="border-b border-gray-800">
                 {['CEO / Empresa', 'Plataforma', 'Publicación', 'Postura', 'Imaginario', 'Sentimiento', 'Fecha'].map(h => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th key={h} scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     {h}
                   </th>
                 ))}

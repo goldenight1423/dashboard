@@ -8,11 +8,29 @@ html, body {
   height: 100%;
   margin: 0;
   padding: 0;
+  color-scheme: dark;
 }
 
 body {
   background: #030712;
   color: #f9fafb;
+  /* Prevents double-tap zoom delay on touch */
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tabular numbers for all numeric data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* Scrollbar dark */

@@ -48,31 +48,47 @@ export default function CEOsPage() {
     setSort(s => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'desc' });
   };
 
-  const Th = ({ k, label }: { k: SortKey; label: string }) => (
-    <th
-      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-300 select-none whitespace-nowrap"
-      onClick={() => toggleSort(k)}
-    >
-      {label} {sort.key === k ? (sort.dir === 'desc' ? '↓' : '↑') : ''}
-    </th>
-  );
+  // Accessible sortable column header
+  const Th = ({ k, label }: { k: SortKey; label: string }) => {
+    const isActive = sort.key === k;
+    const dir = isActive ? sort.dir : undefined;
+    return (
+      <th
+        scope="col"
+        role="columnheader"
+        aria-sort={isActive ? (dir === 'desc' ? 'descending' : 'ascending') : 'none'}
+        className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider select-none whitespace-nowrap"
+      >
+        <button
+          onClick={() => toggleSort(k)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleSort(k); } }}
+          className="flex items-center gap-1 hover:text-gray-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:rounded"
+        >
+          {label}
+          <span aria-hidden="true" className="text-gray-600">
+            {isActive ? (dir === 'desc' ? ' ↓' : ' ↑') : ' ↕'}
+          </span>
+        </button>
+      </th>
+    );
+  };
 
   if (loading) return (
-    <div className="flex items-center justify-center h-full">
-      <p className="text-gray-500">Cargando CEOs...</p>
+    <div className="flex items-center justify-center h-full" role="status" aria-live="polite">
+      <p className="text-gray-500">Cargando CEOs…</p>
     </div>
   );
 
   return (
     <div className="p-6 space-y-4">
       <div>
-        <h1 className="text-xl font-bold text-white">CEOs monitoreados</h1>
+        <h1 className="text-xl font-bold text-white text-balance">CEOs Monitoreados</h1>
         <p className="text-sm text-gray-500 mt-0.5">{ceos.length} directivos en el corpus</p>
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm" aria-label="Tabla de CEOs monitoreados">
             <thead>
               <tr className="border-b border-gray-800 bg-gray-900/80">
                 <Th k="nombre" label="Nombre" />
@@ -81,7 +97,7 @@ export default function CEOsPage() {
                 <Th k="total_publicaciones" label="Pubs." />
                 <Th k="postura_predominante" label="Postura" />
                 <Th k="imaginario_predominante" label="Imaginario" />
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Peso trans.
                 </th>
                 <Th k="avg_confianza" label="Confianza" />
@@ -97,7 +113,7 @@ export default function CEOsPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-300">{ceo.empresa}</td>
                   <td className="px-4 py-3 text-gray-400 text-xs capitalize">{ceo.sector}</td>
-                  <td className="px-4 py-3 text-gray-300 font-mono">
+                  <td className="px-4 py-3 text-gray-300 tabular-nums">
                     <span className="text-white font-bold">{ceo.total_analizadas}</span>
                     <span className="text-gray-600">/{ceo.total_publicaciones}</span>
                   </td>
@@ -115,7 +131,14 @@ export default function CEOsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-20 h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className="w-20 h-1.5 bg-gray-800 rounded-full overflow-hidden"
+                        role="progressbar"
+                        aria-valuenow={ceo.avg_peso_trans ? Math.round(ceo.avg_peso_trans * 100) : 0}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`Peso transhumanista: ${ceo.avg_peso_trans ? Math.round(ceo.avg_peso_trans * 100) : 0}%`}
+                      >
                         <div
                           className="h-full rounded-full"
                           style={{
@@ -124,13 +147,13 @@ export default function CEOsPage() {
                           }}
                         />
                       </div>
-                      <span className="text-xs text-gray-400 font-mono">
+                      <span className="text-xs text-gray-400 tabular-nums">
                         {ceo.avg_peso_trans ? `${Math.round(ceo.avg_peso_trans * 100)}%` : '—'}
                       </span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-sm font-mono ${
+                    <span className={`text-sm tabular-nums ${
                       (ceo.avg_confianza ?? 0) >= 0.8 ? 'text-green-400'
                       : (ceo.avg_confianza ?? 0) >= 0.6 ? 'text-yellow-400'
                       : 'text-red-400'
